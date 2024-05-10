@@ -1,5 +1,6 @@
 package com.example.weatherapp
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,12 +31,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat.startActivity
 import com.example.weatherapp.ui.theme.WeatherAppTheme
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
     private var location by mutableStateOf("New Delhi")
@@ -45,6 +44,10 @@ class MainActivity : ComponentActivity() {
         .addConverterFactory(GsonConverterFactory.create())
         .build()
     val weatherApi: WeatherApi = retrofit.create(WeatherApi::class.java)
+    fun navigateToNext7Days() {
+        val intent = Intent(this, Next7Days::class.java)
+        startActivity(intent)
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -54,7 +57,7 @@ class MainActivity : ComponentActivity() {
                     color = Color(0xFF070F2B),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    WeatherScreen(location, condition, weatherApi)
+                    WeatherScreen(location, condition, weatherApi, this@MainActivity)
                 }
             }
         }
@@ -62,7 +65,7 @@ class MainActivity : ComponentActivity() {
 
 }
 @Composable
-fun WeatherScreen(location: String, condition: String, weatherApi: WeatherApi) {
+fun WeatherScreen(location: String, condition: String, weatherApi: WeatherApi, mainActivity: MainActivity) {
     var weatherData by remember { mutableStateOf<WeatherResponse?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var temp: String
@@ -109,7 +112,7 @@ fun WeatherScreen(location: String, condition: String, weatherApi: WeatherApi) {
                 HourlyData(weatherData = weatherData!!)
                 TextButton(
                     onClick = {
-
+                        mainActivity.navigateToNext7Days()
                     },
                     modifier = Modifier.padding(start = 200.dp),
                     colors = ButtonDefaults.textButtonColors(
