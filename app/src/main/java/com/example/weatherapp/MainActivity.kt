@@ -57,9 +57,6 @@ class MainActivity : ComponentActivity(), LocationListener {
     private var conversionFactor2 by mutableDoubleStateOf(1.0)
     private var isKMH by mutableStateOf(true)
     private var conversionFactor3 by mutableDoubleStateOf(1.0)
-
-    private var location by mutableStateOf("Current")
-    private var condition by mutableStateOf("Can't Say Yet")
     private var lat by mutableDoubleStateOf(0.0)
     private var long by mutableDoubleStateOf(0.0)
     private val retrofit = Retrofit.Builder()
@@ -85,6 +82,11 @@ class MainActivity : ComponentActivity(), LocationListener {
         super.onCreate(savedInstanceState)
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
         getCurrentLocation()
+        val retrofit2 = Retrofit.Builder()
+            .baseUrl("https://geocode.maps.co/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val service = retrofit2.create(ApiService::class.java)
         setContent {
             WeatherAppTheme {
                 Surface(
@@ -104,8 +106,6 @@ class MainActivity : ComponentActivity(), LocationListener {
                         }
                     }
                     WeatherScreen(
-                        location,
-                        condition,
                         weatherApi,
                         this@MainActivity,
                         viewModel,
@@ -118,7 +118,8 @@ class MainActivity : ComponentActivity(), LocationListener {
                         isMM,
                         conversionFactor2,
                         isKMH,
-                        conversionFactor3
+                        conversionFactor3,
+                        service
                     )
                 }
             }
@@ -205,8 +206,6 @@ class MainActivity : ComponentActivity(), LocationListener {
 }
 @Composable
 fun WeatherScreen(
-    location: String,
-    condition: String,
     weatherApi: WeatherApi,
     mainActivity: MainActivity,
     viewModel: PastViewModel,
@@ -219,19 +218,24 @@ fun WeatherScreen(
     isMM: Boolean,
     conversionFactor2: Double,
     isKMH: Boolean,
-    conversionFactor3: Double
+    conversionFactor3: Double,
+    service: ApiService
 ) {
     var weatherData by remember { mutableStateOf<WeatherResponse?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var data by remember { mutableStateOf<GeocodeResponse?>(null) }
+    val location by remember { mutableStateOf("Loading...") }
+    var eM by remember { mutableStateOf<String?>(null) }
     var temp: String
-    var unit = "°C"
+    var unit: String
     LazyColumn(
         modifier = Modifier.padding(50.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         item {
+            val cd = data?.address?.city
             Text(
-                text = location,
+                text = cd.toString(),
                 modifier = Modifier.padding(start = 8.dp),
                 color = Color(0xFFD3D3D3),
                 fontFamily = FontFamily.SansSerif,
@@ -323,7 +327,20 @@ fun WeatherScreen(
             errorMessage = "Error: ${e.message}"
         }
     }
-
+    LaunchedEffect("2") {
+        try {
+            val response = service.reverseGeocode(
+                latitude = lat,
+                longitude = long,
+                api_key = "664078c99762d208919191ansd70603"
+            )
+            data = response
+        } catch (e: IOException) {
+            eM = "Error: No internet connection"
+        } catch (e: Exception) {
+            eM = "Error: ${e.message}"
+        }
+    }
 }
 @Composable
 fun HourlyData(weatherData: WeatherResponse, isCelsius: Boolean, conversionFactor: Double) {
