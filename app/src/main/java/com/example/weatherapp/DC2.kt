@@ -11,6 +11,17 @@ interface WeeklyApi {
         @Query("daily") daily: String
     ): retrieveData
 }
+
+interface PastMonthlyApi {
+    @GET("forecast")
+    suspend fun getPastData(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("daily") daily: String,
+        @Query("past_days") past_days: Int,
+    ): retrieveData
+}
+
 data class retrieveData(
     val latitude: Double,
     val longitude: Double,

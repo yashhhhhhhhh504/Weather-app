@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,10 +28,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
-
 class Next7Days : ComponentActivity() {
     val retrofit = Retrofit.Builder()
         .baseUrl("https://api.open-meteo.com/v1/")
@@ -40,17 +39,23 @@ class Next7Days : ComponentActivity() {
         .build()
     val weeklyApi: WeeklyApi = retrofit.create(WeeklyApi::class.java)
     var text = "text"
+    var lat = 0.0
+    var long = 0.0
+    var isCelsius = true
+    var conversionFactor = 1.8
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        lat = intent.getDoubleExtra("lat", 0.0)
+        long = intent.getDoubleExtra("long", 0.0)
+        isCelsius = intent.getBooleanExtra("isCelsius", true)
+        conversionFactor = intent.getDoubleExtra("conversionFactor", 1.8)
         setContent{
-            Test(weeklyApi, text)
+            Test(weeklyApi, text, lat, long, isCelsius, conversionFactor)
         }
-
     }
 }
-
 @Composable
-fun Test(weeklyApi: WeeklyApi, text: String){
+fun Test(weeklyApi: WeeklyApi, text: String, lat: Double, long: Double, isCelsius: Boolean, conversionFactor: Double){
     var weatherTest by remember { mutableStateOf<retrieveData?>(null)}
     var errorMessage by remember { mutableStateOf<String?>(null)}
     if (weatherTest == null) {
@@ -62,14 +67,14 @@ fun Test(weeklyApi: WeeklyApi, text: String){
             color = Color(0xFF9290C3),
             modifier = Modifier.fillMaxSize()
         )  {
-            List(weatherTest = weatherTest!!)
+            List(weatherTest = weatherTest!!, isCelsius = isCelsius, conversionFactor = conversionFactor)
         }
     }
     LaunchedEffect(text) {
         try {
             val response = weeklyApi.getWeeklyWeather(
-                28.7041,
-                77.1025,
+                lat,
+                long,
                 "temperature_2m_max,temperature_2m_min"
             )
             weatherTest = response
@@ -80,7 +85,7 @@ fun Test(weeklyApi: WeeklyApi, text: String){
 }
 
 @Composable
-fun List(weatherTest: retrieveData){
+fun List(weatherTest: retrieveData, isCelsius: Boolean, conversionFactor: Double){
     val minTemp = weatherTest.daily.temperature_2m_min
     val maxTemp = weatherTest.daily.temperature_2m_max
     LazyColumn(
@@ -90,22 +95,27 @@ fun List(weatherTest: retrieveData){
     ) {
         items(minTemp.size) { index ->
             ElevatedCard(
-                elevation = CardDefaults.cardElevation(
-                    defaultElevation = 6.dp
-                ),
                 modifier = Modifier
                     .size(width = 400.dp, height = 200.dp)
                     .padding(10.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF070F2B),
+                    containerColor = Color(0xB22B2155),
                 ),
             ) {
                 val calendar = Calendar.getInstance()
                 calendar.add(Calendar.DATE, index)
                 val sdf = SimpleDateFormat("EEEE")
                 val dayOfTheWeek: String = sdf.format(calendar.time)
+                var min = minTemp[index]
+                var max = maxTemp[index]
+                if (!isCelsius) {
+                    min = (minTemp[index].toDouble() * conversionFactor + 32)
+                    max = (maxTemp[index].toDouble() * conversionFactor + 32)
+                }
+                min = BigDecimal(min).setScale(2, RoundingMode.HALF_EVEN).toDouble()
+                max = BigDecimal(max).setScale(2, RoundingMode.HALF_EVEN).toDouble()
                 Row (
-                    modifier = Modifier.padding(30.dp)
+                    modifier = Modifier.padding(30.dp),
                 ) {
                     Text(
                         text = "Min",
@@ -134,7 +144,7 @@ fun List(weatherTest: retrieveData){
                     modifier = Modifier.padding(30.dp)
                 ) {
                     Text(
-                        text = "${minTemp[index]}",
+                        text = "$min",
                         color = Color(0xFFD3D3D3),
                         fontSize = 20.sp,
                         fontFamily = FontFamily.SansSerif,
@@ -146,7 +156,7 @@ fun List(weatherTest: retrieveData){
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        text = "${maxTemp[index]}",
+                        text = "$max",
                         color = Color(0xFFD3D3D3),
                         fontSize = 20.sp,
                         fontFamily = FontFamily.SansSerif,
