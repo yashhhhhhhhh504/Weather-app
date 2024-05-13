@@ -7,6 +7,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -50,6 +51,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.io.IOException
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.util.Locale
+
 class MainActivity : ComponentActivity(), LocationListener {
     private var isCelsius by mutableStateOf(true)
     private var conversionFactor by mutableDoubleStateOf(1.0)
@@ -59,6 +62,9 @@ class MainActivity : ComponentActivity(), LocationListener {
     private var conversionFactor3 by mutableDoubleStateOf(1.0)
     private var lat by mutableDoubleStateOf(0.0)
     private var long by mutableDoubleStateOf(0.0)
+    private var lat2 by mutableDoubleStateOf(0.0)
+    private var long2 by mutableDoubleStateOf(0.0)
+    private var locationName by mutableStateOf("")
     private val retrofit = Retrofit.Builder()
         .baseUrl("https://api.open-meteo.com/v1/")
         .addConverterFactory(GsonConverterFactory.create())
@@ -104,23 +110,54 @@ class MainActivity : ComponentActivity(), LocationListener {
                         ) {
                             Text(text = "⚙\uFE0F", color = Color(0xFF9290C3), fontSize = 20.sp)
                         }
+                        TextButton(
+                            onClick = {
+                                openSavedCities()
+                            },
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(10.dp)
+                        ) {
+                            Text(text = "+\uFE0F", color = Color(0xFF9290C3), fontSize = 20.sp)
+                        }
                     }
-                    WeatherScreen(
-                        weatherApi,
-                        this@MainActivity,
-                        viewModel,
-                        pastMonthlyApi,
-                        unique,
-                        lat,
-                        long,
-                        isCelsius,
-                        conversionFactor,
-                        isMM,
-                        conversionFactor2,
-                        isKMH,
-                        conversionFactor3,
-                        service
-                    )
+                    if (lat2 == 0.0){
+                        WeatherScreen(
+                            weatherApi,
+                            this@MainActivity,
+                            viewModel,
+                            pastMonthlyApi,
+                            unique,
+                            lat,
+                            long,
+                            isCelsius,
+                            conversionFactor,
+                            isMM,
+                            conversionFactor2,
+                            isKMH,
+                            conversionFactor3,
+                            service,
+                            ""
+                        )
+                    } else {
+                        WeatherScreen(
+                            weatherApi,
+                            this@MainActivity,
+                            viewModel,
+                            pastMonthlyApi,
+                            unique,
+                            lat2,
+                            long2,
+                            isCelsius,
+                            conversionFactor,
+                            isMM,
+                            conversionFactor2,
+                            isKMH,
+                            conversionFactor3,
+                            service,
+                            locationName
+                        )
+                    }
                 }
             }
         }
@@ -195,7 +232,6 @@ class MainActivity : ComponentActivity(), LocationListener {
             isKMH = !isKMH
         }
     }
-
     private fun openSecondActivity() {
         val intent = Intent(this@MainActivity, Settings::class.java)
         intent.putExtra("isCelsius", isCelsius)
@@ -203,6 +239,47 @@ class MainActivity : ComponentActivity(), LocationListener {
         intent.putExtra("isKMH", isKMH)
         resultLauncher.launch(intent)
     }
+    private val result = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val data = result.data
+            val location = data?.getStringExtra("location")
+            val latitude = data?.getDoubleExtra("latitude", 0.0)
+            val longitude = data?.getDoubleExtra("longitude", 0.0)
+            lat2 = latitude!!
+            long2 = longitude!!
+            locationName = location!!
+        }
+    }
+    private fun openSavedCities() {
+        val intent = Intent(this@MainActivity, SavedCities::class.java)
+        result.launch(intent)
+    }
+    fun navigateToGraphActivity() {
+        val intent = Intent(this, GraphActivity::class.java)
+        intent.putExtra("unique", unique)
+        intent.putExtra("lat", lat)
+        intent.putExtra("long", long)
+        startActivity(intent)
+    }
+    private lateinit var ttsEngine: TextToSpeech
+    fun readTextAloud(context: android.content.Context, text: String) {
+        ttsEngine = TextToSpeech(context, object : TextToSpeech.OnInitListener {
+            override fun onInit(status: Int) {
+                if (status == TextToSpeech.SUCCESS) {
+                    ttsEngine.setLanguage(Locale.getDefault())
+                    val modifiedText = text.replace(".", " point")
+                    ttsEngine.speak(modifiedText, TextToSpeech.QUEUE_FLUSH, null, null)
+
+                }
+            }
+        })
+    }
+    fun runIt(temp: Double){
+        readTextAloud(this@MainActivity, "Current Temperature is $temp Degrees")
+    }
+
 }
 @Composable
 fun WeatherScreen(
@@ -219,7 +296,8 @@ fun WeatherScreen(
     conversionFactor2: Double,
     isKMH: Boolean,
     conversionFactor3: Double,
-    service: ApiService
+    service: ApiService,
+    locationName: String
 ) {
     var weatherData by remember { mutableStateOf<WeatherResponse?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -233,15 +311,27 @@ fun WeatherScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         item {
-            val cd = data?.address?.city
-            Text(
-                text = cd.toString(),
-                modifier = Modifier.padding(start = 8.dp),
-                color = Color(0xFFD3D3D3),
-                fontFamily = FontFamily.SansSerif,
-                fontWeight = FontWeight.Bold,
-                fontSize = 40.sp
-            )
+            if (locationName == ""){
+                val cd = data?.address?.city
+                Text(
+                    text = cd.toString(),
+                    modifier = Modifier.padding(start = 8.dp),
+                    color = Color(0xFFD3D3D3),
+                    fontFamily = FontFamily.SansSerif,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 40.sp
+                )
+            }
+            else {
+                Text(
+                    text = locationName,
+                    modifier = Modifier.padding(start = 8.dp),
+                    color = Color(0xFFD3D3D3),
+                    fontFamily = FontFamily.SansSerif,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 40.sp
+                )
+            }
         }
         if (weatherData == null && errorMessage == null){
             item{
@@ -281,6 +371,7 @@ fun WeatherScreen(
                         fontFamily = FontFamily.SansSerif,
                         fontWeight = FontWeight.Bold
                     )
+                    mainActivity.runIt(temp.toDouble())
                 }
                 item {
                     Spacer(modifier = Modifier.padding(5.dp))
@@ -297,6 +388,18 @@ fun WeatherScreen(
                         Text(text = "Next 7 Days >")
                     }
                     DisplayGraph(viewModel, pastMonthlyApi, unique, lat, long, isCelsius, conversionFactor)
+                    TextButton(
+                        onClick = {
+                            mainActivity.navigateToGraphActivity()
+                        },
+                        modifier = Modifier.padding(start = 200.dp),
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = Color(0xFFD3D3D3)
+                        )
+                    ) {
+                        Text(text = "Expand >")
+                    }
+
                 }
                 item {
                     Spacer(modifier = Modifier.padding(10.dp))
