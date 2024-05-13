@@ -29,6 +29,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -43,6 +44,7 @@ import kotlin.math.min
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
@@ -157,7 +159,8 @@ fun GraphScreen(viewModel: PastViewModel,pastMonthlyApi: PastMonthlyApi,unique: 
 
     LazyColumn(
         modifier = Modifier.padding(50.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceEvenly
     ){
         item{
             Text(
@@ -178,11 +181,17 @@ fun GraphScreen(viewModel: PastViewModel,pastMonthlyApi: PastMonthlyApi,unique: 
                 fontWeight = FontWeight.Bold
             )
             Datagetter(weeklyApi = weeklyApi , text = text, lat = lat, long = long)
+            Spacer(modifier = Modifier.height(50.dp))
         }
         item{
-            comparison(pastMonthlyApi = pastMonthlyApi, text = text)
-        }
+            Row(
+                modifier = Modifier.padding(15.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ){
 
+                comparison(pastMonthlyApi = pastMonthlyApi, text = text)
+            }
+        }
     }
 
 
@@ -291,12 +300,15 @@ fun TemperatureComparisonBarGraph(
 ) {
     val maxValue = maxOf(avgmaxtemp, avgmintemp, currmaxtemp, currmintemp)
     val barWidth = 100f
-    val barSpacing = 16f
+    val barSpacing = 30f
     val maxBarHeight = 200f
     val labelSpacing = 8.dp
     val barColors = listOf(Color(0xFFADD8E6), Color(0xFF000080), Color(0xFFE6E6FA), Color(0xFF800080))
+    Column(
+        modifier = Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.SpaceEvenly
 
-    Column(modifier = Modifier.padding(16.dp)) {
+    ) {
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()

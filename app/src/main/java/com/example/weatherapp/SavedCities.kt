@@ -19,7 +19,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,7 +41,12 @@ class SavedCities : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            SavedCitiesScreen()
+            Surface(
+                color = Color(0xFF070F2B),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                SavedCitiesScreen()
+            }
         }
     }
     private fun sendBack(location: String, latitude: Double, longitude: Double) {
@@ -175,8 +182,8 @@ class SavedCities : ComponentActivity() {
                     if (jsonArray.size() > 0) {
                         val firstResult = jsonArray.get(0).asJsonObject
                         val boundingbox = firstResult.getAsJsonArray("boundingbox")
-                        val latitude = (boundingbox.get(0).asDouble + boundingbox.get(2).asDouble) / 2
-                        val longitude = (boundingbox.get(1).asDouble + boundingbox.get(3).asDouble) / 2
+                        val latitude = boundingbox.get(0).asDouble
+                        val longitude = boundingbox.get(2).asDouble
 
                         withContext(Dispatchers.Main) {
                             callback(latitude, longitude)
@@ -208,7 +215,7 @@ class SavedCities : ComponentActivity() {
                             sendBack(location.location, location.latitude, location.longitude)
                         },
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        containerColor = Color(0xFF9290C3),
                     )
                 ) {
                     Box(
@@ -218,7 +225,10 @@ class SavedCities : ComponentActivity() {
                         Text(
                             text = "${location.location}",
                             modifier = Modifier.padding(16.dp),
-                            fontSize = 20.sp
+                            fontSize = 20.sp,
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = FontFamily.SansSerif
                         )
                     }
                 }
